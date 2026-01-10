@@ -12,6 +12,7 @@ interface CartItem {
 }
 
 
+
 export default function Home() {
     const navigate = useNavigate();
     const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -23,6 +24,15 @@ export default function Home() {
 
     const [savedCarts, setSavedCarts] = useState<any[]>([]);
     const [loadingSaved, setLoadingSaved] = useState(false);
+
+    const [itemName, setItemName] = useState("");
+
+    const [itemMessage, setItemMessage] = useState<string | null>(null);
+
+    const [itemPrice, setItemPrice] = useState<number | "">("");
+    const [itemPriceDisplay, setItemPriceDisplay] = useState("");
+
+
 
 
     const token = localStorage.getItem("token");
@@ -133,6 +143,17 @@ export default function Home() {
     };
 
 
+    const formatCOP = (value: string | number) => {
+        if (!value) return "";
+        return new Intl.NumberFormat("es-CO", {
+            style: "currency",
+            currency: "COP",
+            minimumFractionDigits: 0,
+        }).format(Number(value));
+    };
+
+
+
 
 
     return (
@@ -182,7 +203,7 @@ export default function Home() {
                     </p>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        {["Productos", "Carritos", "Pedidos"].map((item) => (
+                        {["Productos", "Carritos", "Pedidos", "Items"].map((item) => (
                             <motion.div
                                 key={item}
                                 onClick={() => {
@@ -318,7 +339,7 @@ export default function Home() {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {cartItems.map((item) => (
                                         <motion.div
-                                            key={item.product_id} 
+                                            key={item.product_id}
                                             initial={{ opacity: 0, scale: 0.9 }}
                                             animate={{ opacity: 1, scale: 1 }}
                                             className="rounded-xl border bg-gray-50 p-6 hover:shadow-md transition"
@@ -414,7 +435,7 @@ export default function Home() {
                                                     { headers: { Authorization: `Bearer ${token}` } }
                                                 );
                                                 setCartMessage(`Compra realizada con #id: ${res.data.cart_id}`);
-                                                setCartItems([]); 
+                                                setCartItems([]);
                                                 setTimeout(() => setCartMessage(null), 4000);
                                             } catch (err) {
                                                 console.error("Error al realizar la compra:", err);
@@ -483,6 +504,125 @@ export default function Home() {
                         )}
                     </motion.div>
                 )}
+
+
+                {/* SECCION ITEMS */}
+                {activeSection === "Items" && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="flex justify-center"
+                    >
+                        <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+                            {/* HEADER */}
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="p-3 bg-indigo-100 rounded-xl">
+                                    <ShoppingBag className="text-indigo-600" />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-800">
+                                        Nuevo producto
+                                    </h2>
+                                    <p className="text-sm text-gray-500">
+                                        Agrega productos al catálogo
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* MENSAJE */}
+                            {itemMessage && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className={`mb-5 p-4 rounded-lg text-sm font-medium ${itemMessage.includes("éxito")
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-red-100 text-red-700"
+                                        }`}
+                                >
+                                    {itemMessage}
+                                </motion.div>
+                            )}
+
+                            {/* FORM */}
+                            <form
+                                onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    if (!token) return navigate("/");
+
+                                    try {
+                                        await axios.post(
+                                            "http://127.0.0.1:8000/products",
+                                            {
+                                                name: itemName,
+                                                price: Number(itemPrice),
+                                            },
+                                            { headers: { Authorization: `Bearer ${token}` } }
+                                        );
+                                        setItemMessage("Producto agregado con éxito");
+                                        setItemName("");
+                                        setItemPrice("");
+                                        setTimeout(() => setItemMessage(null), 3000);
+                                    } catch (err) {
+                                        console.error(err);
+                                        setItemMessage("Error al agregar el producto");
+                                        setTimeout(() => setItemMessage(null), 3000);
+                                    }
+                                }}
+                                className="space-y-5"
+                            >
+                                {/* INPUT NOMBRE */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                        Nombre del producto
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={itemName}
+                                        onChange={(e) => setItemName(e.target.value)}
+                                        placeholder="Ej: Monitor"
+                                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                        required
+                                    />
+                                </div>
+
+                                {/* INPUT PRECIO */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                        Precio
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        value={itemPriceDisplay}
+                                        onChange={(e) => {
+                                            // quitar todo lo que no sea número
+                                            const rawValue = e.target.value.replace(/\D/g, "");
+
+                                            setItemPrice(rawValue ? Number(rawValue) : "");
+                                            setItemPriceDisplay(rawValue ? formatCOP(rawValue) : "");
+                                        }}
+                                        placeholder="$70.000"
+                                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300
+                   focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                        required
+                                    />
+                                </div>
+
+
+                                {/* BOTON */}
+                                <button
+                                    type="submit"
+                                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition cursor-pointer"
+                                >
+                                    <Check size={18} />
+                                    Guardar producto
+                                </button>
+                            </form>
+                        </div>
+                    </motion.div>
+                )}
+
 
 
             </main>

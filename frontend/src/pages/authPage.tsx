@@ -124,7 +124,7 @@ export default function AuthPage() {
 
                         <button
                             type="submit"
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold transition"
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold transition cursor-pointer"
                         >
                             {isLogin ? "Ingresar" : "Registrarse"}
                         </button>
