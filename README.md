@@ -56,7 +56,7 @@ npm run dev
 
 Todos los endpoints de carrito requieren autenticación con token.
 
-Los precios se expresan en moneda local (ej: COP, USD).
+Los precios se expresan en moneda local (COP).
 
 ------------------------------------------------------------------------------------------------
 
