@@ -12,6 +12,7 @@ class CartItemResponse(BaseModel):
     price: float
     quantity: int
     subtotal: float
+    image: str | None
 
 
 class CartResponse(BaseModel):

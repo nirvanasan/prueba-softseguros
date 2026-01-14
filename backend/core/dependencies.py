@@ -15,6 +15,14 @@ def get_db():
     finally:
         db.close()
 
+        """
+        Cada request:
+
+        abre sesión
+
+        la cierra automáticamente
+        """
+
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
@@ -38,3 +46,13 @@ def get_current_user(
         raise credentials_exception
 
     return user
+
+"""
+Lee el token del header
+
+Decodifica JWT
+
+Busca usuario en DB
+
+Si falla → 401
+"""

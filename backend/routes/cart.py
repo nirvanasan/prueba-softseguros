@@ -49,7 +49,8 @@ def get_cart(
             "name": i.product.name,
             "price": i.price,
             "quantity": i.quantity,
-            "subtotal": subtotal
+            "subtotal": subtotal,
+            "image": i.product.image
         })
 
     return {
@@ -119,7 +120,8 @@ def add_to_cart(
             "name": i.product.name,
             "price": i.price,
             "quantity": i.quantity,
-            "subtotal": subtotal
+            "subtotal": subtotal,
+            "image": i.product.image
         })
 
     return {"items": items, "total": total}
@@ -230,7 +232,8 @@ def get_saved_carts(
                     "product_name": item.product.name,
                     "price": item.price,
                     "quantity": item.quantity,
-                    "subtotal": item.price * item.quantity
+                    "subtotal": item.price * item.quantity,
+                    "image": item.product.image
                 }
                 for item in cart.items
             ],

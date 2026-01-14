@@ -4,12 +4,23 @@ import { ShoppingBag, LogOut, User, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-interface CartItem {
-    item_id: number;
-    product_name: string;
-    price: number;
-    quantity: number;
+export interface SavedCartItem {
+    item_id: number
+    product_id: number
+    product_name: string
+    price: number
+    quantity: number
+    subtotal: number
+    image: string | null
 }
+
+export interface SavedCart {
+    cart_id: number
+    purchased_at: string
+    items: SavedCartItem[]
+    total: number
+}
+
 
 
 
@@ -22,7 +33,7 @@ export default function Home() {
     const [cartMessage, setCartMessage] = useState<string | null>(null);
     const [quantities, setQuantities] = useState<Record<number, number>>({});
 
-    const [savedCarts, setSavedCarts] = useState<any[]>([]);
+    const [savedCarts, setSavedCarts] = useState<SavedCart[]>([])
     const [loadingSaved, setLoadingSaved] = useState(false);
 
     const [itemName, setItemName] = useState("");
@@ -32,11 +43,13 @@ export default function Home() {
     const [itemPrice, setItemPrice] = useState<number | "">("");
     const [itemPriceDisplay, setItemPriceDisplay] = useState("");
 
+    const [itemImage, setItemImage] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
 
 
 
     const token = localStorage.getItem("token");
-    console.log(token);
+    //console.log(token);
 
     const logout = () => {
         localStorage.removeItem("token");
@@ -154,6 +167,19 @@ export default function Home() {
 
 
 
+    const Restar = () => {
+        setCartItems((prevItems) =>
+            prevItems.map((item) => {
+                const newQty = item.quantity > 1 ? item.quantity - 1 : 1;
+
+                return {
+                    ...item,
+                    quantity: newQty,
+                    subtotal: item.price * newQty,
+                };
+            })
+        );
+    };
 
 
     return (
@@ -243,69 +269,102 @@ export default function Home() {
                         transition={{ duration: 0.5 }}
                         className="bg-white rounded-2xl shadow-lg p-8 mb-6"
                     >
-                        <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6">
                             🛒 Productos
                         </h2>
 
                         {loading ? (
                             <p className="text-gray-500">Cargando productos...</p>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {products.map((product, index) => (
                                     <motion.div
                                         key={product.id}
-                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        initial={{ opacity: 0, scale: 0.95 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: index * 0.1 }}
-                                        className="rounded-xl border bg-gray-50 p-6 hover:shadow-md transition"
+                                        transition={{ delay: index * 0.05 }}
+                                        className="rounded-2xl border bg-white overflow-hidden
+                                   hover:shadow-xl transition flex flex-col"
                                     >
-                                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                                            {product.name}
-                                        </h3>
-                                        <p className="text-gray-600 mb-4">
-                                            ${product.price.toLocaleString()}
-                                        </p>
-
-                                        {/* INPUT DE CANTIDAD */}
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <button
-                                                onClick={() => decrement(product.id)}
-                                                className="px-2 py-1 bg-gray-200 rounded"
-                                            >
-                                                -
-                                            </button>
-                                            <input
-                                                type="number"
-                                                value={quantities[product.id] || 1}
-                                                min={1}
-                                                onChange={(e) =>
-                                                    handleInputChange(
-                                                        product.id,
-                                                        parseInt(e.target.value)
-                                                    )
+                                        {/* IMAGEN */}
+                                        <div className="h-44 bg-gray-100 overflow-hidden">
+                                            <img
+                                                src={
+                                                    product.image
+                                                        ? product.image.startsWith("http")
+                                                            ? product.image
+                                                            : `http://127.0.0.1:8000/${product.image}`
+                                                        : "/placeholder.png"
                                                 }
-                                                className="w-12 text-center border rounded"
+                                                alt={product.name}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).src =
+                                                        "/placeholder.png";
+                                                }}
                                             />
-                                            <button
-                                                onClick={() => increment(product.id)}
-                                                className="px-2 py-1 bg-gray-200 rounded"
-                                            >
-                                                +
-                                            </button>
                                         </div>
 
-                                        <button
-                                            onClick={() => addToCart(product.id)}
-                                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg transition flex items-center justify-center gap-2"
-                                        >
-                                            Agregar al carrito
-                                        </button>
+                                        {/* CONTENIDO */}
+                                        <div className="p-5 flex flex-col flex-1">
+                                            <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                                                {product.name}
+                                            </h3>
+
+                                            <p className="text-indigo-600 font-bold mb-4">
+                                                {formatCOP(product.price)}
+                                            </p>
+
+                                            {/* CANTIDAD */}
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <button
+                                                    onClick={() => decrement(product.id)}
+                                                    className="px-3 py-1 bg-gray-200 rounded-lg
+                                               hover:bg-gray-300 transition"
+                                                >
+                                                    −
+                                                </button>
+
+                                                <input
+                                                    type="number"
+                                                    min={1}
+                                                    value={quantities[product.id] || 1}
+                                                    onChange={(e) =>
+                                                        handleInputChange(
+                                                            product.id,
+                                                            parseInt(e.target.value)
+                                                        )
+                                                    }
+                                                    className="w-12 text-center border rounded-lg"
+                                                />
+
+                                                <button
+                                                    onClick={() => increment(product.id)}
+                                                    className="px-3 py-1 bg-gray-200 rounded-lg
+                                               hover:bg-gray-300 transition"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+
+                                            {/* BOTON */}
+                                            <button
+                                                onClick={() => addToCart(product.id)}
+                                                className="mt-auto w-full bg-indigo-600
+                                           hover:bg-indigo-700 text-white
+                                           py-2.5 rounded-xl transition
+                                           font-semibold"
+                                            >
+                                                Agregar al carrito
+                                            </button>
+                                        </div>
                                     </motion.div>
                                 ))}
                             </div>
                         )}
                     </motion.div>
                 )}
+
 
 
                 {/* SECCION CARRITOS */}
@@ -316,143 +375,210 @@ export default function Home() {
                         transition={{ duration: 0.5 }}
                         className="bg-white rounded-2xl shadow-lg p-8 mb-6"
                     >
-                        <h1 className="text-2xl font-bold text-gray-800 mb-4">
+                        <h1 className="text-2xl font-bold text-gray-800 mb-2">
                             🛒 Mi carrito actual
                         </h1>
 
-                        <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                            Total: $
-                            {cartItems
-                                .reduce(
-                                    (sum, item) => sum + (item.subtotal || item.price * item.quantity),
+                        <h2 className="text-xl font-bold text-indigo-600 mb-6">
+                            Total:{" "}
+                            {formatCOP(
+                                cartItems.reduce(
+                                    (sum, item) =>
+                                        sum + (item.subtotal || item.price * item.quantity),
                                     0
                                 )
-                                .toLocaleString()}
+                            )}
                         </h2>
-
-
 
                         {cartItems.length === 0 ? (
                             <p className="text-gray-500">No hay productos en el carrito.</p>
                         ) : (
                             <>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {cartItems.map((item) => (
                                         <motion.div
-                                            key={item.product_id}
-                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            key={item.item_id}
+                                            initial={{ opacity: 0, scale: 0.95 }}
                                             animate={{ opacity: 1, scale: 1 }}
-                                            className="rounded-xl border bg-gray-50 p-6 hover:shadow-md transition"
+                                            className="rounded-2xl border bg-white overflow-hidden hover:shadow-lg transition flex flex-col"
                                         >
-                                            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                                                {item.name}
-                                            </h3>
-                                            <p className="text-gray-600 mb-2">
-                                                ${item.price.toLocaleString()}
-                                            </p>
+                                            {/* IMAGEN */}
+                                            <div className="h-36 bg-gray-100 overflow-hidden">
+                                                <img
+                                                    src={
+                                                        item.image
+                                                            ? item.image.startsWith("http")
+                                                                ? item.image
+                                                                : `http://127.0.0.1:8000/${item.image}`
+                                                            : "/placeholder.png"
+                                                    }
+                                                    alt={item.name}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        (e.target as HTMLImageElement).src =
+                                                            "/placeholder.png";
+                                                    }}
+                                                />
+                                            </div>
 
-                                            {/* Cantidad editable */}
-                                            <div className="flex items-center gap-2 mb-4">
-                                                <button
-                                                    onClick={async () => {
-                                                        if (item.quantity > 1) {
-                                                            const newQty = item.quantity - 1;
+                                            {/* CONTENIDO */}
+                                            <div className="p-5 flex flex-col flex-1">
+                                                <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                                                    {item.name}
+                                                </h3>
+
+                                                <p className="text-gray-600 mb-3">
+                                                    {formatCOP(item.price)}
+                                                </p>
+
+                                                {/* CANTIDAD */}
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (item.quantity > 1) {
+                                                                const newQty = item.quantity - 1;
+                                                                await axios.put(
+                                                                    `http://127.0.0.1:8000/cart/item/${item.item_id}`,
+                                                                    { quantity: newQty },
+                                                                    {
+                                                                        headers: {
+                                                                            Authorization: `Bearer ${token}`,
+                                                                        },
+                                                                    }
+                                                                );
+                                                                fetchCart();
+                                                            }
+                                                        }}
+                                                        className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
+                                                    >
+                                                        −
+                                                    </button>
+
+                                                    <input
+                                                        type="number"
+                                                        min={1}
+                                                        value={item.quantity}
+                                                        onChange={async (e) => {
+                                                            const newQty =
+                                                                parseInt(e.target.value) || 1;
                                                             await axios.put(
                                                                 `http://127.0.0.1:8000/cart/item/${item.item_id}`,
                                                                 { quantity: newQty },
-                                                                { headers: { Authorization: `Bearer ${token}` } }
+                                                                {
+                                                                    headers: {
+                                                                        Authorization: `Bearer ${token}`,
+                                                                    },
+                                                                }
                                                             );
                                                             fetchCart();
-                                                        }
-                                                    }}
-                                                    className="px-2 py-1 bg-gray-200 rounded"
-                                                >
-                                                    -
-                                                </button>
-                                                <input
-                                                    type="number"
-                                                    min={1}
-                                                    value={item.quantity}
-                                                    onChange={async (e) => {
-                                                        const newQty = parseInt(e.target.value) || 1;
-                                                        await axios.put(
-                                                            `http://127.0.0.1:8000/cart/item/${item.item_id}`,
-                                                            { quantity: newQty },
-                                                            { headers: { Authorization: `Bearer ${token}` } }
-                                                        );
-                                                        fetchCart();
-                                                    }}
-                                                    className="w-12 text-center border rounded"
-                                                />
+                                                        }}
+                                                        className="w-12 text-center border rounded-lg"
+                                                    />
+
+                                                    <button
+                                                        onClick={async () => {
+                                                            const newQty = item.quantity + 1;
+                                                            await axios.put(
+                                                                `http://127.0.0.1:8000/cart/item/${item.item_id}`,
+                                                                { quantity: newQty },
+                                                                {
+                                                                    headers: {
+                                                                        Authorization: `Bearer ${token}`,
+                                                                    },
+                                                                }
+                                                            );
+                                                            fetchCart();
+                                                        }}
+                                                        className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
+
+                                                {/* SUBTOTAL */}
+                                                <p className="text-gray-800 font-semibold mb-4">
+                                                    Subtotal:{" "}
+                                                    {formatCOP(
+                                                        item.subtotal ||
+                                                        item.price * item.quantity
+                                                    )}
+                                                </p>
+
+                                                {/* BOTON ELIMINAR */}
                                                 <button
                                                     onClick={async () => {
-                                                        const newQty = item.quantity + 1;
-                                                        await axios.put(
+                                                        await axios.delete(
                                                             `http://127.0.0.1:8000/cart/item/${item.item_id}`,
-                                                            { quantity: newQty },
-                                                            { headers: { Authorization: `Bearer ${token}` } }
+                                                            {
+                                                                headers: {
+                                                                    Authorization: `Bearer ${token}`,
+                                                                },
+                                                            }
                                                         );
                                                         fetchCart();
                                                     }}
-                                                    className="px-2 py-1 bg-gray-200 rounded"
+                                                    className="mt-auto w-full bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl transition font-medium"
                                                 >
-                                                    +
+                                                    Eliminar
                                                 </button>
                                             </div>
-
-
-
-                                            <button
-                                                onClick={async () => {
-                                                    await axios.delete(
-                                                        `http://127.0.0.1:8000/cart/item/${item.item_id}`,
-                                                        { headers: { Authorization: `Bearer ${token}` } }
-                                                    );
-                                                    fetchCart();
-                                                }}
-                                                className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg transition"
-                                            >
-                                                Eliminar
-                                            </button>
-
-                                            <p className="text-gray-800 font-semibold mt-2">
-                                                Subtotal: ${(item.subtotal || item.price * item.quantity).toLocaleString()}
-                                            </p>
-
                                         </motion.div>
-
                                     ))}
                                 </div>
 
                                 {/* BOTON REALIZAR COMPRA */}
-                                <div className="mt-6 flex justify-end">
+                                <div className="mt-8 flex justify-end">
                                     <button
                                         onClick={async () => {
                                             try {
                                                 const res = await axios.post(
                                                     "http://127.0.0.1:8000/cart/save",
                                                     {},
-                                                    { headers: { Authorization: `Bearer ${token}` } }
+                                                    {
+                                                        headers: {
+                                                            Authorization: `Bearer ${token}`,
+                                                        },
+                                                    }
                                                 );
-                                                setCartMessage(`Compra realizada con #id: ${res.data.cart_id}`);
+                                                setCartMessage(
+                                                    `Compra realizada con #id: ${res.data.cart_id}`
+                                                );
                                                 setCartItems([]);
-                                                setTimeout(() => setCartMessage(null), 4000);
+                                                setTimeout(
+                                                    () => setCartMessage(null),
+                                                    4000
+                                                );
                                             } catch (err) {
-                                                console.error("Error al realizar la compra:", err);
-                                                setCartMessage("Error al realizar la compra ");
-                                                setTimeout(() => setCartMessage(null), 4000);
+                                                console.error(err);
+                                                setCartMessage(
+                                                    "Error al realizar la compra"
+                                                );
+                                                setTimeout(
+                                                    () => setCartMessage(null),
+                                                    4000
+                                                );
                                             }
                                         }}
-                                        className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition"
+                                        className="bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-3 rounded-xl transition"
                                     >
-                                        Realizar Compra
+                                        Realizar compra
                                     </button>
+                                </div>
+                                <div className="mt-8 flex justify-end">
+                                    <button
+
+                                        onClick={Restar}
+                                        className="bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-3 rounded-xl transition"
+                                    >
+                                        Restar
+
+                                    </button>
+
                                 </div>
                             </>
                         )}
                     </motion.div>
                 )}
-
 
 
                 {/* SECCION PEDIDOS */}
@@ -463,7 +589,7 @@ export default function Home() {
                         transition={{ duration: 0.5 }}
                         className="bg-white rounded-2xl shadow-lg p-8 mb-6"
                     >
-                        <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6">
                             📦 Pedidos realizados
                         </h2>
 
@@ -480,23 +606,63 @@ export default function Home() {
                                         animate={{ opacity: 1, scale: 1 }}
                                         className="rounded-xl border bg-gray-50 p-6 hover:shadow-md transition"
                                     >
-                                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                                            Carrito #{cart.cart_id} - {cart.purchased_at ? new Date(cart.purchased_at).toLocaleString() : "Fecha desconocida"}
-                                        </h3>
+                                        {/* HEADER */}
+                                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                                            <h3 className="text-lg font-semibold text-gray-800">
+                                                Carrito #{cart.cart_id}
+                                            </h3>
+                                            <span className="text-sm text-gray-500">
+                                                {cart.purchased_at
+                                                    ? new Date(cart.purchased_at).toLocaleString("es-CO")
+                                                    : "Fecha desconocida"}
+                                            </span>
+                                        </div>
 
+                                        {/* ITEMS */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {cart.items.map((item: CartItem) => (
-                                                <div key={item.item_id} className="bg-white p-4 rounded-lg shadow-sm">
-                                                    <h4 className="font-medium text-gray-800">{item.product_name}</h4>
-                                                    <p className="text-gray-600">Precio: ${item.price.toLocaleString()}</p>
-                                                    <p className="text-gray-600">Cantidad: {item.quantity}</p>
-                                                    <p className="font-semibold text-gray-800">Subtotal: ${(item.price * item.quantity).toLocaleString()}</p>
+                                            {cart.items.map((item) => (
+                                                <div
+                                                    key={item.item_id}
+                                                    className="bg-white p-4 rounded-xl shadow-sm flex gap-4"
+                                                >
+                                                    {/* IMAGEN */}
+                                                    <img
+                                                        src={
+                                                            item.image
+                                                                ? `http://127.0.0.1:8000/${item.image}`
+                                                                : "/placeholder.png"
+                                                        }
+                                                        alt={item.product_name}
+                                                        className="w-24 h-24 object-cover rounded-lg border bg-gray-100"
+                                                    />
+
+                                                    {/* INFO */}
+                                                    <div className="flex-1">
+                                                        <h4 className="font-semibold text-gray-800">
+                                                            {item.product_name}
+                                                        </h4>
+
+                                                        <p className="text-gray-600">
+                                                            Precio: $
+                                                            {item.price.toLocaleString("es-CO")}
+                                                        </p>
+
+                                                        <p className="text-gray-600">
+                                                            Cantidad: {item.quantity}
+                                                        </p>
+
+                                                        <p className="font-semibold text-gray-800">
+                                                            Subtotal: $
+                                                            {item.subtotal.toLocaleString("es-CO")}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
 
-                                        <p className="mt-4 text-right font-bold text-gray-800">
-                                            Total: ${cart.total.toLocaleString()}
+                                        {/* TOTAL */}
+                                        <p className="mt-4 text-right font-bold text-gray-800 text-lg">
+                                            Total: ${cart.total.toLocaleString("es-CO")}
                                         </p>
                                     </motion.div>
                                 ))}
@@ -504,6 +670,7 @@ export default function Home() {
                         )}
                     </motion.div>
                 )}
+
 
 
                 {/* SECCION ITEMS */}
@@ -551,17 +718,31 @@ export default function Home() {
                                     if (!token) return navigate("/");
 
                                     try {
+                                        const formData = new FormData();
+                                        formData.append("name", itemName);
+                                        formData.append("price", String(itemPrice));
+
+                                        if (itemImage) {
+                                            formData.append("image", itemImage);
+                                        }
+
                                         await axios.post(
-                                            "http://127.0.0.1:8000/products",
+                                            "http://127.0.0.1:8000/products/",
+                                            formData,
                                             {
-                                                name: itemName,
-                                                price: Number(itemPrice),
-                                            },
-                                            { headers: { Authorization: `Bearer ${token}` } }
+                                                headers: {
+                                                    Authorization: `Bearer ${token}`,
+
+                                                },
+                                            }
                                         );
+
                                         setItemMessage("Producto agregado con éxito");
                                         setItemName("");
                                         setItemPrice("");
+                                        setItemImage(null);
+                                        setImagePreview(null);
+
                                         setTimeout(() => setItemMessage(null), 3000);
                                     } catch (err) {
                                         console.error(err);
@@ -569,11 +750,11 @@ export default function Home() {
                                         setTimeout(() => setItemMessage(null), 3000);
                                     }
                                 }}
-                                className="space-y-5"
+                                className="space-y-6"
                             >
                                 {/* INPUT NOMBRE */}
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-sm font-semibold text-gray-700">
                                         Nombre del producto
                                     </label>
                                     <input
@@ -581,44 +762,89 @@ export default function Home() {
                                         value={itemName}
                                         onChange={(e) => setItemName(e.target.value)}
                                         placeholder="Ej: Monitor"
-                                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300
+                       focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                         required
                                     />
                                 </div>
 
                                 {/* INPUT PRECIO */}
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-sm font-semibold text-gray-700">
                                         Precio
                                     </label>
-
                                     <input
                                         type="text"
                                         value={itemPriceDisplay}
                                         onChange={(e) => {
-                                            // quitar todo lo que no sea número
                                             const rawValue = e.target.value.replace(/\D/g, "");
-
                                             setItemPrice(rawValue ? Number(rawValue) : "");
                                             setItemPriceDisplay(rawValue ? formatCOP(rawValue) : "");
                                         }}
                                         placeholder="$70.000"
                                         className="w-full px-4 py-2.5 rounded-lg border border-gray-300
-                   focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                       focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                         required
                                     />
                                 </div>
 
+                                {/* IMAGEN */}
+                                <div className="flex flex-col gap-3">
+                                    <label className="text-sm font-semibold text-gray-700 text-center">
+                                        Imagen del producto
+                                    </label>
+
+                                    <div className="flex flex-col items-center gap-4">
+                                        {/* PREVIEW */}
+                                        <div className="w-28 h-28 rounded-2xl border bg-gray-50 overflow-hidden flex items-center justify-center">
+                                            {imagePreview ? (
+                                                <img
+                                                    src={imagePreview}
+                                                    alt="Preview"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <span className="text-xs text-gray-400 text-center px-3">
+                                                    Sin imagen
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* INPUT FILE */}
+                                        <label className="cursor-pointer">
+                                            <span className="px-5 py-2.5 bg-indigo-100 text-indigo-700
+                                 rounded-lg font-medium text-sm
+                                 hover:bg-indigo-200 transition">
+                                                Seleccionar imagen
+                                            </span>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                hidden
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        setItemImage(file);
+                                                        setImagePreview(URL.createObjectURL(file));
+                                                    }
+                                                }}
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
 
                                 {/* BOTON */}
                                 <button
                                     type="submit"
-                                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition cursor-pointer"
+                                    className="w-full flex items-center justify-center gap-2
+                   bg-indigo-600 hover:bg-indigo-700 text-white
+                   font-semibold py-3 rounded-xl transition cursor-pointer"
                                 >
                                     <Check size={18} />
                                     Guardar producto
                                 </button>
                             </form>
+
                         </div>
                     </motion.div>
                 )}
